@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.http import JsonResponse, Http404
 from django.shortcuts import render
 from .models import Ingredient, Recipe, RecipeIngredient
@@ -25,9 +26,13 @@ def add_ingredient_to_recipe(request):
         recipe = Recipe.objects.get(id=recipe_id)
         ingredient = Ingredient.objects.get(id=ingredient_id)
 
-        recipe_ingredient, created = RecipeIngredient.objects.get_or_create(
-            recipe=recipe, ingredient=ingredient, defaults={'weight': weight}
-        )
+        with transaction.atomic():
+            recipe_ingredient, _ = (
+                RecipeIngredient.objects.get_or_create(
+                    recipe=recipe, ingredient=ingredient,
+                    defaults={'weight': weight}
+                    )
+                    )
 
         if weight is not None:
             recipe_ingredient.weight += int(weight)
@@ -69,10 +74,11 @@ def cook_recipe(request):
     try:
         recipe_id = request.GET.get('recipe_id')
         recipe = Recipe.objects.get(id=recipe_id)
-
-        for recipe_ingredient in recipe.recipeingredient_set.all():
-            recipe_ingredient.ingredient.times_cooked += 1
-            recipe_ingredient.ingredient.save()
+        
+        with transaction.atomic():
+            for recipe_ingredient in recipe.recipeingredient_set.all():
+                recipe_ingredient.ingredient.times_cooked += 1
+                recipe_ingredient.ingredient.save()
 
         return JsonResponse(
             {
@@ -101,14 +107,15 @@ def show_recipes_without_ingredient(request):
         ingredient_id = request.GET.get('ingredient_id')
         ingredient = Ingredient.objects.get(id=ingredient_id)
 
-        recipes = (
-            Recipe.objects.exclude(
-                recipeingredient__ingredient=ingredient
-                ) | Recipe.objects.filter(
-                    recipeingredient__ingredient=ingredient,
-                    recipeingredient__weight__lt=10
-                    )
-            ).distinct()
+        with transaction.atomic():
+            recipes = (
+                Recipe.objects.exclude(
+                    recipeingredient__ingredient=ingredient
+                    ) | Recipe.objects.filter(
+                        recipeingredient__ingredient=ingredient,
+                        recipeingredient__weight__lt=10
+                        )
+                ).distinct()
 
         context = {
             'recipes': recipes,
