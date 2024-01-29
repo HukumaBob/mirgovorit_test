@@ -1,0 +1,20 @@
+{% extends 'base.html' %} {% block title %}Рецепты без ингредиента{% endblock %}
+{% block content %}
+<h1>Recipes without ingredients</h1>
+<table class="table">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Recipe</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for recipe in recipes %}
+    <tr>
+      <td>{{ recipe.id }}</td>
+      <td>{{ recipe.name }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
